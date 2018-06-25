@@ -2,6 +2,7 @@ package com.example.bill.camerarecorder;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
@@ -16,6 +17,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Toast;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
@@ -61,7 +63,9 @@ public class CameraRecorderActivity extends AppCompatActivity {
 
         @Override
         public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-
+            if (mSurfaceHolder.getSurface() == null) {
+                return;
+            }
         }
 
         @Override
@@ -97,15 +101,24 @@ public class CameraRecorderActivity extends AppCompatActivity {
 
     private void _setCameraParams() {
         if (mCamera != null) {
-            if (cameraDirection == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+            Camera.Parameters parameters = mCamera.getParameters();
+            /*if (cameraDirection == Camera.CameraInfo.CAMERA_FACING_FRONT) {
                 mCamera.setDisplayOrientation(270);
             } else {
                 mCamera.setDisplayOrientation(90);
+            }*/
+            if (this.getResources().getConfiguration().orientation != Configuration.ORIENTATION_LANDSCAPE) {
+                parameters.set("orientation", "portrait");
+                mCamera.setDisplayOrientation(90);
+            } else {
+                parameters.set("orientation", "landscape");
+                mCamera.setDisplayOrientation(0);
             }
-            Camera.Parameters parameters = mCamera.getParameters();
             List<Camera.Size> mSupportedPreviewSizes = parameters.getSupportedPreviewSizes();
             List<Camera.Size> mSupportedVideoSizes = parameters.getSupportedVideoSizes();
-            Camera.Size optimalSize = CameraHelper.getOptimalVideoSize(mSupportedVideoSizes, mSupportedPreviewSizes, mSurfaceView.getWidth(), mSurfaceView.getHeight());
+            int width = mSurfaceView.getWidth();
+            int height = mSurfaceView.getHeight();
+            Camera.Size optimalSize = CameraHelper.getOptimalVideoSize(mSupportedVideoSizes, mSupportedPreviewSizes, Math.max(width, height), Math.min(width, height));
             preViewWidth = optimalSize.width;
             preViewHeight = optimalSize.height;
             Log.e("Bill", preViewWidth + "|" + preViewHeight);
@@ -160,7 +173,17 @@ public class CameraRecorderActivity extends AppCompatActivity {
         mMediaRecorder.setProfile(mProfile);
 
         mMediaRecorder.setOrientationHint(90);
-        mMediaRecorder.setOutputFile("/sdcard/Video/test.mp4");
+        mMediaRecorder.setOutputFile(getPath() + "/test.mp4");
+    }
+
+    private String getPath() {
+        String filePath = "/sdcard/Video";
+        File file = new File(filePath);
+        if (!file.exists()) {
+            file.mkdir();
+        }
+        file = null;
+        return filePath;
     }
 
     private void _stopRecord() {
